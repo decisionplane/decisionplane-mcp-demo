@@ -1,0 +1,52 @@
+policy: github-merge-protection
+version: 1
+description: |
+  Auto-merge protection for protected branches. CI must be green before this
+  policy even evaluates (checks_status ≠ success → DENY immediately). Small
+  green PRs from trusted contributors allow automatically. Larger PRs require
+  code-owner approval. Very large changesets (> 2000 lines) are denied.
+
+  Demo quick reference:
+    DENY              — context.checks_status ≠ success  (CI failing)
+    ALLOW             — checks_status=success, lines_changed=30,   recent_failures=0
+    REQUIRE_APPROVAL  — checks_status=success, lines_changed=400,  recent_failures=0
+    DENY              — checks_status=success, lines_changed=2000
+
+applies_to:
+  actions:
+    - github.pr.merge
+
+conditions:
+  # CI must pass — a failing check suite blocks any auto-merge path.
+  - field: context.checks_status
+    op: eq
+    value: success
+  # Only protected base branches are in scope.
+  - field: resource.attributes.base_branch
+    op: in
+    value: [main, master, release]
+
+risk_factors:
+  # Change size: PRs under 50 lines score 0; 2000+ lines score 1
+  - source: blast_radius
+    weight: 0.7
+    inputs:
+      field: context.lines_changed
+      soft_limit: 50
+      hard_limit: 2000
+
+  # Actor reliability: frequent merge failures raise the risk score
+  - source: actor_history
+    weight: 0.3
+    inputs:
+      field: context.actor_history.recent_failures
+      baseline: 2
+
+thresholds:
+  allow_below: 0.10
+  approval_below: 0.60
+  deny_above: 0.70
+
+approval:
+  required_roles: [code-owner]
+  timeout_ms: 14400000   # 4 hours

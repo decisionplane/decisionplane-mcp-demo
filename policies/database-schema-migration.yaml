@@ -1,0 +1,52 @@
+policy: database-schema-migration
+version: 1
+description: |
+  Database DDL guard. Schema changes must have been migration-tested before
+  evaluation (migration_tested ≠ true → DENY). Non-destructive changes on
+  small tables in dev allow automatically. Staging changes require DBA
+  approval. Production-scale changes (many tables or huge estimated row
+  count) deny — use a tracked migration pipeline instead.
+
+  Demo quick reference:
+    DENY              — context.migration_tested=false  (condition unmet)
+    ALLOW             — migration_tested=true, tables_affected=1,  rows_estimated=5000
+    REQUIRE_APPROVAL  — migration_tested=true, tables_affected=3,  rows_estimated=500000
+    DENY              — migration_tested=true, tables_affected=10, rows_estimated=5000000
+
+applies_to:
+  actions:
+    - db.schema.alter
+    - db.schema.drop
+    - db.schema.create
+
+conditions:
+  # Migration must have been tested in a shadow environment first.
+  - field: context.migration_tested
+    op: eq
+    value: true
+
+risk_factors:
+  # How many tables are affected (soft=1, hard=10)
+  - source: blast_radius
+    weight: 0.60
+    inputs:
+      field: context.tables_affected
+      soft_limit: 1
+      hard_limit: 10
+
+  # Estimated row count being rewritten (soft=10k, hard=10M)
+  - source: blast_radius
+    weight: 0.40
+    inputs:
+      field: context.rows_estimated
+      soft_limit: 10000
+      hard_limit: 10000000
+
+thresholds:
+  allow_below: 0.10
+  approval_below: 0.70
+  deny_above: 0.85
+
+approval:
+  required_roles: [dba, platform-engineer]
+  timeout_ms: 7200000   # 2 hours

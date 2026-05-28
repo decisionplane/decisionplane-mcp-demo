@@ -1,0 +1,59 @@
+policy: data-deletion
+version: 1
+description: |
+  PII and bulk data deletion guard. A dry-run validation must pass before any
+  delete is evaluated (missing dry_run_passed → DENY immediately). Single-row
+  non-PII deletes allow automatically; any deletion affecting PII rows or
+  moderate record counts requires data-steward approval; mass deletes
+  (≥ 100k rows) are denied unconditionally.
+
+  Demo quick reference:
+    ALLOW             — dry_run_passed=true, rows_affected=1,   pii_rows_affected=0
+    REQUIRE_APPROVAL  — dry_run_passed=true, rows_affected=500, pii_rows_affected=1
+    DENY              — dry_run_passed=false  (condition unmet)
+                      — or rows_affected >= 100,000
+
+applies_to:
+  actions:
+    - data.delete.*
+    - db.delete.*
+
+conditions:
+  # Dry-run must have been executed and passed before any live delete.
+  # Missing or false → DENY immediately.
+  - field: context.dry_run_passed
+    op: eq
+    value: true
+
+risk_factors:
+  # Primary driver: total rows being deleted (soft=1, hard=100,000)
+  - source: blast_radius
+    weight: 0.70
+    inputs:
+      field: context.rows_affected
+      soft_limit: 1
+      hard_limit: 100000
+
+  # PII sensitivity: even a single PII row raises the score sharply
+  - source: blast_radius
+    weight: 0.20
+    inputs:
+      field: context.pii_rows_affected
+      soft_limit: 0
+      hard_limit: 1
+
+  # Actor reliability: penalise agents with recent error history
+  - source: actor_history
+    weight: 0.10
+    inputs:
+      field: context.actor_history.recent_failures
+      baseline: 3
+
+thresholds:
+  allow_below: 0.05
+  approval_below: 0.75
+  deny_above: 0.90
+
+approval:
+  required_roles: [data-steward]
+  timeout_ms: 3600000   # 1 hour

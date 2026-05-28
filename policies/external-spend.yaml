@@ -1,0 +1,44 @@
+policy: external-spend
+version: 1
+description: |
+  AI-agent external spend guard. Micro-purchases (< $500) allow automatically
+  once currency validation passes. Purchases of $500 or more require finance
+  sign-off. Hard cap: $10,000 or above denies unconditionally — no approval
+  can override a purchase at this scale.
+
+  Demo quick reference:
+    ALLOW             — amount=49,   currency=USD
+    REQUIRE_APPROVAL  — amount=1200, currency=USD
+    DENY              — amount=10000 (exceeds hard cap)
+
+applies_to:
+  actions:
+    - spend.create.*
+
+conditions:
+  # Spend must be a positive USD amount — unknown currencies are excluded.
+  - field: context.amount
+    op: gte
+    value: 0
+  - field: context.currency
+    op: eq
+    value: USD
+
+risk_factors:
+  # Amount as a fraction of the $500–$10,000 range.
+  # Below $500 → score 0 → ALLOW. Above $10,000 → score 1 → DENY.
+  - source: blast_radius
+    weight: 1.0
+    inputs:
+      field: context.amount
+      soft_limit: 500
+      hard_limit: 10000
+
+thresholds:
+  allow_below: 0.001   # anything below the soft_limit (< $500) → 0 → ALLOW
+  approval_below: 0.95
+  deny_above: 0.95
+
+approval:
+  required_roles: [finance-approver]
+  timeout_ms: 7200000   # 2 hours

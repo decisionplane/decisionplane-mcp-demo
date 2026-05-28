@@ -1,0 +1,53 @@
+policy: k8s-deploy-guard
+version: 1
+description: |
+  Kubernetes deployment guard. Deploys with a linked runbook, low blast
+  radius, and during business hours allow automatically. Larger or off-hours
+  deploys require SRE-manager approval. Very large blast-radius deploys
+  (e.g. whole-cluster rollouts) are denied unconditionally.
+
+  Demo quick reference:
+    ALLOW             — context.has_runbook=true, affected_services=2, business hours
+    REQUIRE_APPROVAL  — context.has_runbook=true, affected_services=8, weeknight
+    DENY              — context.has_runbook=false  (runbook missing → fail condition)
+                      — or affected_services=15+ during weekend freeze
+
+applies_to:
+  actions:
+    - k8s.deploy.*
+
+conditions:
+  - field: context.has_runbook
+    op: eq
+    value: true
+
+risk_factors:
+  # Blast radius: how many services are touched (soft=1, hard=10)
+  - source: blast_radius
+    weight: 0.6
+    inputs:
+      field: context.affected_services
+      soft_limit: 1
+      hard_limit: 10
+
+  # Change-freeze windows: weekends and overnight (UTC)
+  - source: freeze_window
+    weight: 0.4
+    inputs:
+      windows:
+        - days: [sat, sun]
+          score: 1.0
+          label: weekend-freeze
+        - days: [mon, tue, wed, thu, fri]
+          hours: [22, 6]
+          score: 0.7
+          label: overnight-freeze
+
+thresholds:
+  allow_below: 0.20
+  approval_below: 0.80
+  deny_above: 0.90
+
+approval:
+  required_roles: [sre-manager]
+  timeout_ms: 1800000   # 30 minutes

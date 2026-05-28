@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "decisionplane": {
+      "command": "dp-mcp",
+      "env": {
+        "DECISIONPLANE_MODE": "local",
+        "DECISIONPLANE_ACTOR_ID": "claude-code",
+        "DECISIONPLANE_ACTOR_ROLE": "agent"
+      }
+    }
+  }
+}

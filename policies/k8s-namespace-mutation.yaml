@@ -1,0 +1,50 @@
+policy: k8s-namespace-mutation
+version: 1
+description: |
+  Kubernetes namespace mutation guard. System namespaces (kube-system,
+  kube-public, kube-node-lease) are always denied — no approval can
+  override a system namespace mutation. Dev namespaces with small workload
+  counts allow; staging-scale mutations require platform-engineer approval;
+  large-scale mutations deny.
+
+  Demo quick reference:
+    DENY              — resource.id=kube-system   (condition: not_in system list)
+    ALLOW             — resource.id=dev-api,        workloads_touched=0
+    REQUIRE_APPROVAL  — resource.id=staging-api,    workloads_touched=5
+    DENY              — resource.id=prod-payments,  workloads_touched=20
+
+applies_to:
+  actions:
+    - k8s.namespace.apply
+    - k8s.namespace.delete
+    - k8s.namespace.scale
+
+conditions:
+  # System namespaces are unconditionally denied — condition not met → DENY.
+  - field: resource.id
+    op: not_in
+    value: [kube-system, kube-public, kube-node-lease]
+
+risk_factors:
+  # Static baseline: namespace mutations always carry inherent risk
+  - source: static
+    weight: 0.4
+    inputs:
+      score: 0.5
+
+  # Blast radius: how many running workloads will be affected
+  - source: blast_radius
+    weight: 0.6
+    inputs:
+      field: context.workloads_touched
+      soft_limit: 0
+      hard_limit: 20
+
+thresholds:
+  allow_below: 0.30    # score for 0 workloads = 0.20 → ALLOW
+  approval_below: 0.70 # 5 workloads → score ~0.35 → REQUIRE_APPROVAL
+  deny_above: 0.70     # 20 workloads → score 0.80 → DENY (> approval_below)
+
+approval:
+  required_roles: [platform-engineer]
+  timeout_ms: 900000   # 15 minutes
