@@ -1,0 +1,92 @@
+name: Docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/docs/**'
+      - 'docs/**'
+      - '.github/workflows/docs.yml'
+  pull_request:
+    paths:
+      - 'apps/docs/**'
+      - 'docs/**'
+  workflow_dispatch:
+
+# Allow one concurrent deploy; cancel in-progress on new push
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build docs
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Self-enable Pages (Source = GitHub Actions) on first run so no manual
+      # Settings → Pages click is needed. No-op once already enabled.
+      - name: Configure Pages
+        if: github.ref == 'refs/heads/main'
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Resolve base path
+        id: base
+        run: |
+          # Priority: DOCS_BASE var > PAGES_CUSTOM_DOMAIN var > static CNAME file > /<repo>/
+          if [ -n "${{ vars.DOCS_BASE }}" ]; then
+            echo "value=${{ vars.DOCS_BASE }}" >> $GITHUB_OUTPUT
+          elif [ -n "${{ vars.PAGES_CUSTOM_DOMAIN }}" ] || [ -f apps/docs/public/CNAME ]; then
+            echo "value=/" >> $GITHUB_OUTPUT
+          else
+            echo "value=/${{ github.event.repository.name }}/" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build VitePress
+        env:
+          DOCS_BASE: ${{ steps.base.outputs.value }}
+        working-directory: apps/docs
+        run: ./node_modules/.bin/vitepress build
+
+      - name: Write CNAME for custom domain
+        if: github.ref == 'refs/heads/main' && vars.PAGES_CUSTOM_DOMAIN != ''
+        run: echo "${{ vars.PAGES_CUSTOM_DOMAIN }}" > apps/docs/.vitepress/dist/CNAME
+
+      - name: Upload pages artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/docs/.vitepress/dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

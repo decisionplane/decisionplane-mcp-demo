@@ -1,0 +1,14 @@
+{
+  "name": "decisionplane-public",
+  "version": "0.1.0",
+  "private": true,
+  "license": "BUSL-1.1",
+  "packageManager": "pnpm@11.1.3",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "docs:dev": "pnpm --filter @decisionplane/docs dev",
+    "docs:build": "pnpm --filter @decisionplane/docs build"
+  }
+}
