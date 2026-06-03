@@ -7,6 +7,10 @@ on:
       - 'apps/docs/**'
       - 'docs/**'
       - '.github/workflows/docs.yml'
+      - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
+      - '.npmrc'
+      - 'package.json'
   pull_request:
     paths:
       - 'apps/docs/**'
