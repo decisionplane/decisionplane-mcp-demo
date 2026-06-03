@@ -35,12 +35,6 @@ jobs:
         working-directory: apps/docs
         run: npm install --no-save vitepress@1.5.0
 
-      - name: Configure Pages
-        if: github.ref == 'refs/heads/main'
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
-
       - name: Build VitePress
         env:
           DOCS_BASE: /
