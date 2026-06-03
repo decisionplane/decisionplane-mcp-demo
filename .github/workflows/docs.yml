@@ -40,7 +40,7 @@ jobs:
         with:
           node-version: 20
 
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --ignore-scripts
 
       # Self-enable Pages (Source = GitHub Actions) on first run so no manual
       # Settings → Pages click is needed. No-op once already enabled.
