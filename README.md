@@ -2,7 +2,7 @@
 
 > Seven battle-tested policies for governing AI agents — install in 30 seconds, no account required.
 
-This repo is the official policy bundle for [DecisionPlane](https://github.com/decisionplane/decisionplane).
+This repo is the official policy bundle for [DecisionPlane](https://decisionplane.github.io/docs/).
 Clone it, drop the policies into `~/dp-policies/`, add the MCP server to Claude Desktop or Claude Code,
 and every consequential action your AI agent attempts is gated by real governance — locally, with no
 network calls and no daemon.
@@ -171,7 +171,7 @@ jq -r '.decision' ~/.decisionplane/traces.jsonl | sort | uniq -c
 
 ## Authoring your own policies
 
-Policies are YAML files using the [Policy DSL](https://decisionplane.io/docs/guide/policy-dsl).
+Policies are YAML files using the [Policy DSL](https://decisionplane.github.io/docs/guide/policy-dsl).
 Save any `.yaml` file to `~/dp-policies/` — no restart required.
 
 The files in `policies/` are a working starting point. Each file includes inline comments explaining
@@ -200,10 +200,10 @@ Your policies migrate directly — the YAML format is identical in both modes.
 
 ## Links
 
-- **Main repo**: [github.com/decisionplane/decisionplane](https://github.com/decisionplane/decisionplane)
+- **Source access**: [hello@decisionplane.dev](mailto:hello@decisionplane.dev?subject=DecisionPlane%20access%20request)
 - **npm package**: [@decisionplane/mcp](https://www.npmjs.com/package/@decisionplane/mcp)
-- **Docs**: [decisionplane.io/docs](https://decisionplane.io/docs)
-- **Policy DSL reference**: [decisionplane.io/docs/reference/policy-schema](https://decisionplane.io/docs/reference/policy-schema)
+- **Docs**: [decisionplane.github.io/docs](https://decisionplane.github.io/docs/)
+- **Policy DSL reference**: [decisionplane.github.io/docs/reference/policy-schema](https://decisionplane.github.io/docs/reference/policy-schema)
 
 ---
 
